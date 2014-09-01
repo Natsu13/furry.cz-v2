@@ -287,6 +287,10 @@ class CmsPagePresenter extends BasePresenter
 			->setRequired("Je nutné zadat název")
 			->setValue($cmsPage["Name"])
 			->getControlPrototype()->class = "Wide";
+			
+		$form->addText("Alias", "Alias :")
+			->setValue($cmsPage["Alias"])
+			->getControlPrototype()->class = "Wide";	
 
 		$form->addTextArea("Description", "Popisek:", 2, 10) // Small rows/cols values to allow css scaling
 			->setValue($cmsPage["Description"]);
@@ -345,9 +349,12 @@ class CmsPagePresenter extends BasePresenter
 				"LastModifiedByUser" => $this->user->id,
 			));
 
+			if(!$this->user->isInRole('admin')){ $values['Alias'] = $cmsPage["Alias"]; }
+			
 			// Update CMS pages
 			$cmsPage->update(array(
 				"Name" => $values["Name"],
+				"Alias" => $values["Alias"],
 				"Description" => $values["Description"],
 				"Text" => $values["Text"],
 			));

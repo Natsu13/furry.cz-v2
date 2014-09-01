@@ -1,3 +1,6 @@
+	<style>
+	a.ContextMenu { padding: 2px 5px; }
+	</style>
 	<div style="float:left;width:49%;padding:5px;">
 		{form permissions-permisionForm}
 		<table class="permisionTable">
@@ -66,7 +69,7 @@
 			<tr>
 				<td>
 					<input type="hidden" name="permisionId[{$i}]" value>
-					<select name="user[{$i}]" style="width:100%;">
+					<select name="user[{$i}]" style="width:100%;" id="selectUser">
 						<option value>Přidat uživatele</option>
 						{foreach $allUsers as $user}
 							<option value="{$user[0]}">{$user[1]}</option>

@@ -45,13 +45,13 @@ class GalleryPresenter extends BasePresenter
 		// RECENTLY POSTED IMAGES
 
 		// Fetch data
-		$since = new DateTime();
-		$since = $since->sub(new DateInterval('P10D')); // Today minus 10 days
+		//$since = new DateTime();  //Blbost blbost a znovu blbost všichni na to nadavaj a ty to tu dáš...
+		//$since = $since->sub(new DateInterval('P10D')); // Today minus 10 days
 		$recentPostsDB = $database
 			->table("Content")
 			->where(array(
-				"Type" => "Image",
-				"LastModifiedTime > ?" => $since
+				"Type" => "Image"
+				//"LastModifiedTime > ?" => $since
 			))
 			->order("LastModifiedTime DESC");
 

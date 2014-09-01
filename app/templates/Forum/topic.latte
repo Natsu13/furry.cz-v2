@@ -22,16 +22,22 @@
 
 {block content}
 	<div class="JS" style="position: relative;float: right; top: 5px;right: 13px;">
+		<a n:href="book!, $topic['Id']" title="{if $book}Kliknutím téma odeberete z oblíbených{else}Kliknutím si přidáte téma do oblíbených{/if}" style="position: relative;right: -5px;border-right: 0px;padding-left:22px;{if $book}background-image:url({$basePath}/images/check.png);background-repeat: no-repeat;background-position: 5px 5px;background-size: 13px;{/if}" class="button{if $book} clicked{/if}">Oblíbené</a>
 		<a href=# class="ContextMenu" dropdown="topicSetting" dropdown-open="right" dropdown-absolute="false">Nabídka</a>
 		<div class="listDiv" id="topicSetting">
-			<div class="listBox">
+			<div class="listBox" style="width: 210px;max-height: 250px;">
 				<ul>
 				<li><a n:href="Forum:Info $topic['Id']">Informace o tématu</a></li>
-				<li><a href="#">Přidat téma do oblíbených</a></li>
 				{if $access["CanEditPermissions"] or $access["CanEditContentAndAttributes"] or $access["CanEditHeader"]}<li class="cara"></li>{/if}
 				{if $access["CanEditPermissions"]}<li><a n:href="Forum:Permision $topic['Id']">Oprávnění</a></li>{/if}
 				{if $access["CanEditContentAndAttributes"]}<li><a n:href="Forum:Edit $topic['Id']">Upravit</a></li>{/if}
 				{if $access["CanEditHeader"]}<li><a n:href="Forum:Header $topic['Id']">Upravit hlavičku</a></li>{/if}
+				{if $access["CanEditPolls"]}<li><a n:href="Forum:Polls $topic['Id']">Spravovat ankety</a></li>{/if}
+				{if $presenter->user->isInRole('admin')}
+					<li class="cara"></li>
+					<li><a n:href="lock!, $topic['Id']">{if $topic["Lock"]==0}Zamknout téma{else}Odemknout téma{/if}</a></li>
+					<li><a n:href="pin!, $topic['Id']">{if $topic["Pin"]==0}Připíchnout téma{else}Odpíchnout téma{/if}</a></li>
+				{/if}
 				</ul>
 			</div>
 		</div>
@@ -45,14 +51,15 @@
 			</span>	
 
 			<div class="NoJS">
+				<div style="float:right;margin-left:10px;margin-top: 7px;"><a n:href="Forum:Info $topic['Id']">Informace o tématu</a></div>
 			{if $access["CanEditPermissions"]}
-				<div style="float:right;margin-left:10px;"><a n:href="Forum:Permision $topic['Id']">Upravit práva</a></div>
+				<div style="float:right;margin-left:10px;margin-top: 7px;"><a n:href="Forum:Permision $topic['Id']">Upravit práva</a></div>
 			{/if}
 			{if $access["CanEditContentAndAttributes"]}
-				<div style="float:right;margin-left:10px;"><a n:href="Forum:Edit $topic['Id']">Upravit</a></div>
+				<div style="float:right;margin-left:10px;margin-top: 7px;"><a n:href="Forum:Edit $topic['Id']">Upravit</a></div>
 			{/if}
 			{if $access["CanEditHeader"]}
-				<div style="float:right;margin-left:10px;"><a n:href="Forum:Header $topic['Id']">Upravit Hlavičku</a></div>
+				<div style="float:right;margin-left:10px;margin-top: 7px;"><a n:href="Forum:Header $topic['Id']">Upravit Hlavičku</a></div>
 			{/if}
 			</div>
 		</div>

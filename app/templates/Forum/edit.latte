@@ -17,7 +17,7 @@
 				<dt>Příznaky:</dt>
 				<dd>{input IsForRegisteredOnly} {label IsForRegisteredOnly /}</dd>
 				<dd>{input IsForAdultsOnly} <span class="redbox" style="padding: 2px 3px;">{label IsForAdultsOnly /}</span></dd>
-				<dd>{input IsFlame} {label IsFlame /}</dd>				
+				{if $presenter->user->isInRole('admin')}<dd>{input IsFlame} {label IsFlame /}</dd>{/if}
 				
 				<dd>{input SubmitNewTopic}</dd>
 			</dl>
@@ -29,7 +29,8 @@
 		<div class="Body">
 			<dl>
 				<dt>Smazání tematu již nelze vzít zpátky!</dt>
-				<dd>{input SubmitDeleteTopic} Téma starší jak jeden měsíc nelze smazat! Musíte požádat o smazani administratora!</dd>
+				<dd>{input SubmitDeleteTopic} Téma bude označeno ke smazání!</dd>
+				{if $presenter->user->isInRole('admin')}<dd style="font-weight:bold;color:red;">Jsi administrátor a tlačítkem smažeš téma!</dd>{/if}
 			</dl>	
 		</div>		
 	{/form}

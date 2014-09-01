@@ -29,22 +29,104 @@ class ForumPresenter extends BasePresenter
 		}
 		
 		$categories = $database->table('TopicCategories')->select('Id, Name');
-		$topics = $database->table('Topics');
+		$cate = null;
+		foreach($categories as $cat)
+		{
+			$cate[$cat["Id"]] = $cate[$cat["Name"]];
+		}
+		$categories = $cate;
+		
+		$topics = $database->query('SELECT Topics.* FROM Topics LEFT JOIN Posts on Topics.ContentId = Posts.ContentId JOIN Content on Topics.ContentId = Content.Id GROUP BY Topics.ContentId ORDER BY Topics.Pin DESC, CASE WHEN COUNT( Posts.TimeCreated ) = 0 THEN Content.TimeCreated ELSE Posts.TimeCreated END DESC')->fetchAll();		
 		$topicsAll = null;
 		$i=0;
 		foreach($topics as $topic)
 		{
 			$postCount[$topic["Id"]]["Count"] = $i; // FIXME: this is definitely wrong, fix as soon as possible.
 			$i++;
-		}
+		}				
 		
 		$this->template->setParameters(array(
 			'categories' => $categories,
 			'topics' => $topics,
-			'allUserWithInfo' => $allUserWithInfo
+			'allUserWithInfo' => $allUserWithInfo,
+			'database' => $database
 		));
 	}
 
+	public function renderPolls($topicId){
+		$database = $this->context->database;
+		$topic = $database->table('Topics')->where('Id', $topicId)->fetch();
+		if ($topic == false)
+		{
+			throw new Nette\Application\BadRequestException('Zadané téma neexistuje');
+		}
+		$authorizator = new Authorizator($database);
+		$access = $authorizator->authorize($topic["ContentId"], $this->user);
+		if ($access['IsOwner'] == true or $access['CanEditPolls'] == true )
+		{
+			$this->template->Name = $topic["Name"];
+			$this->template->topicId = $topicId;
+			$this->template->Owner = $access['IsOwner'];
+		}
+		else
+		{
+			throw new Nette\Application\BadRequestException('Nejsi vlastník nebo pověřený správce anket!');
+		}
+	}
+	
+	public function renderNewPoll($topicId){
+		$database = $this->context->database;
+		$topic = $database->table('Topics')->where('Id', $topicId)->fetch();
+		if ($topic == false)
+		{
+			throw new Nette\Application\BadRequestException('Zadané téma neexistuje');
+		}
+		$authorizator = new Authorizator($database);
+		$access = $authorizator->authorize($topic["ContentId"], $this->user);
+		if ($access['IsOwner'] == true or $access['CanEditPolls'] == true )
+		{
+			$this->template->Name = $topic["Name"];
+			$this->template->topicId = $topicId;
+			$this->template->Owner = $access['IsOwner'];
+			
+			$this['newPoll']->setDefaults(
+					array(	"TopicId" => $topicId,
+							"ContentId" => $topic["ContentId"]
+					));		
+		}
+		else
+		{
+			throw new Nette\Application\BadRequestException('Nejsi vlastník nebo pověřený správce anket!');
+		}
+	}
+	
+	public function createComponentNewPoll()
+	{
+		$form = new UI\Form;
+		$form->addTextArea('Data', 'Data', 2, 5);
+		$form->addHidden('TopicId');
+		$form->addHidden('ContentId');
+		$form->onSuccess[] = $this->processValidatedNewPoll;
+		$form->addSubmit('SubmitCreatePoll', 'Vytvořit anketu');
+		return $form;
+	}
+	
+	public function processValidatedNewPoll($form){
+		$values = $form->getValues();
+		$database = $this->context->database;
+		
+		$authorizator = new Authorizator($database);
+		$access = $authorizator->authorize($values["ContentId"], $this->user);
+		if ($access['IsOwner'] == true or $access['CanEditPolls'] == true )
+		{
+		
+		$data = json_decode($values["Data"],true);
+		dump($data);
+		
+		//$this->redirect('Forum:topic', $values["TopicId"]);
+		
+		}else{ throw new Nette\Application\BadRequestException('Nejsi vlastník nebo pověřený správce anket!'); }
+	}
 
 
 	/**
@@ -57,8 +139,58 @@ class ForumPresenter extends BasePresenter
 			throw new BadRequestException("Nemáte oprávnění");
 		}
 	}
+	
+	public function handleBook($topicId){
+		if (!$this->user->isInRole("approved"))
+		{
+			throw new BadRequestException("Nemáte oprávnění");
+		}
+		
+		$this->getContentManager()->bookSet($topicId, $this->user->id, null, true);
+		$this->redirect('Forum:topic', $topicId);
+	}
 
-
+	public function handleLock($topicId){
+		$topicId = $this->getParameter("topicId");
+		
+		$database = $this->context->database;
+		list($topic, $content, $access) = $this->checkTopicAccess($topicId, $this->user);				
+		
+		if ($this->user->isInRole("admin"))
+		{
+			if($topic["Lock"]==1){ $lock = 0; }
+			else{ $lock = 1; }
+			$database->table('Topics')->where('Id', $topicId)->update(array(
+				"Lock" => $lock
+			));
+			$this->redirect('Forum:topic', $topicId);
+		}
+		else
+		{
+			throw new Nette\Application\BadRequestException('Nejsi administrátor!');
+		}
+	}
+	
+	public function handlePin($topicId){
+		$topicId = $this->getParameter("topicId");
+		
+		$database = $this->context->database;
+		list($topic, $content, $access) = $this->checkTopicAccess($topicId, $this->user);				
+		
+		if ($this->user->isInRole("admin"))
+		{
+			if($topic["Pin"]==1){ $pin = 0; }
+			else{ $pin = 1; }
+			$database->table('Topics')->where('Id', $topicId)->update(array(
+				"Pin" => $pin
+			));
+			$this->redirect('Forum:topic', $topicId);
+		}
+		else
+		{
+			throw new Nette\Application\BadRequestException('Nejsi administrátor!');
+		}
+	}
 
 	public function renderEdit($topicId)
 	{
@@ -128,6 +260,7 @@ class ForumPresenter extends BasePresenter
 		$values = $form->getValues();
 		$database = $this->context->database;
 		
+		$topicId = $this->getParameter("topicId");
 		list($topic, $content, $access) = $this->checkTopicAccess($topicId, $this->user);
 
 		if ($access['IsOwner'] == true )
@@ -209,10 +342,12 @@ class ForumPresenter extends BasePresenter
 		$values = $form->getValues();
 		$database = $this->context->database;
 
+		$topicId = $this->getParameter("topicId");
 		list($topic, $content, $access) = $this->checkTopicAccess($topicId, $this->user);
 
 		if ($access['IsOwner'] == true or $access['CanEditContentAndAttributes'] == true )
 		{
+			if(!$this->user->isInRole('admin')){ $values['IsFlame'] = $topic["IsFlame"]; }
 			$topic->update(array(
 				'Name'       => $values['Name'],
 				'IsFlame'    => $values['IsFlame'],
@@ -285,6 +420,7 @@ class ForumPresenter extends BasePresenter
 	{
 		$values = $form->getValues();
 
+		$topicId = $this->getParameter("topicId");
 		list($topic, $content, $access) = $this->checkTopicAccess($topicId, $this->user);
 
 		if ($access['IsOwner'] == true or $access['CanEditHeader'] == true )
@@ -499,12 +635,15 @@ class ForumPresenter extends BasePresenter
 	public function renderTopic($topicId, $page, $findPost)
 	{
 		list($topic, $content, $access) = $this->checkTopicAccess($topicId, $this->user);
+		
+		$this->getContentManager()->updateLastVisit($content, $this->user);
 
 		// Setup template
 		$this->template->setParameters(array(
 			'topic' => $topic,
 			'content' => $content,
-			'access' => $access
+			'access' => $access,
+			'book' => $this->getContentManager()->bookIs($topicId, $this->user->id)
 		));
 	}
 
@@ -550,6 +689,17 @@ class ForumPresenter extends BasePresenter
 			$allUserWithInfo[$owner["UserId"]][2]
 		);
 		$this->template->posts = count($database->table('Posts')->where("ContentId",$conte["Id"])->where("Deleted",0));
+		
+		$userPosts = null;
+		$infa = $database->table('Posts')->where("ContentId",$conte["Id"])->where("Deleted",0);
+		foreach($infa as $inf)
+		{
+			if(!isset($userPosts[$inf["Author"]])){ $userPosts[$inf["Author"]]=array("Name" => $allUserWithInfo[$inf["Author"]][0],"Posts" => 0); }
+			$userPosts[$inf["Author"]]["Posts"]+=1;
+		}
+		if($userPosts!=null)
+			arsort($userPosts);
+		$this->template->userPosts = $userPosts;
 	}
 
 

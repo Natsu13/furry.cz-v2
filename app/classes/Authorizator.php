@@ -131,7 +131,7 @@ class Authorizator extends \Nette\Object
 				'CanWritePosts' => true,
 				'CanEditPermissions' => true,
 				'CanEditPolls' => true,
-				'IsOwner' => $isOwner
+				'IsOwner' => true
 			);
 		}
 
